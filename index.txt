@@ -1,0 +1,77 @@
+Deep Learning Practicals - Index
+================================
+
+1.  Tensor basics + Perceptron vs MLP on handwritten digits (MNIST)
+    https://raw.githubusercontent.com/kzarre/dl/main/1.py
+
+2.  House price regression with L1 / L2 / Dropout overfitting comparison (California Housing)
+    https://raw.githubusercontent.com/kzarre/dl/main/2.py
+
+3.  CNN 10-class image classifier with dropout, save & reload model (CIFAR-10)
+    https://raw.githubusercontent.com/kzarre/dl/main/3.py
+
+4.  Cat vs dog classifier with pretrained MobileNetV2: feature extraction vs fine-tuning (Cats vs Dogs)
+    https://raw.githubusercontent.com/kzarre/dl/main/4.py
+
+5.  Movie review sentiment: SimpleRNN vs LSTM vs GRU comparison (IMDB)
+    https://raw.githubusercontent.com/kzarre/dl/main/5.py
+
+6.  Autoencoder that compresses and reconstructs digit images (MNIST)
+    https://raw.githubusercontent.com/kzarre/dl/main/6.py
+
+7.  CNN optimization: Xavier vs He init, SGD/Adam/RMSprop, learning-rate schedules (CIFAR-10)
+    https://raw.githubusercontent.com/kzarre/dl/main/7.py
+
+8.  Image captioning: ResNet50 features + LSTM caption generator, BLEU score (Flickr8k)
+    https://raw.githubusercontent.com/kzarre/dl/main/8.py
+
+9.  Product recommendation system with embeddings, Precision@K / Recall@K (Retailrocket)
+    https://raw.githubusercontent.com/kzarre/dl/main/9.py
+
+10. Tweet sentiment LSTM + @mention user network graph coloured by sentiment (Sentiment140)
+    https://raw.githubusercontent.com/kzarre/dl/main/10.py
+
+11. GAN generating fake clothing images, generator vs discriminator loss (Fashion-MNIST)
+    https://raw.githubusercontent.com/kzarre/dl/main/11.py
+
+12. News article classification: Transformer (self-attention) vs LSTM (AG News)
+    https://raw.githubusercontent.com/kzarre/dl/main/12.py
+
+13. MLP comparison: number of layers, neurons, sigmoid vs tanh vs ReLU (Fashion-MNIST)
+    https://raw.githubusercontent.com/kzarre/dl/main/13.py
+
+14. Tumour malignant vs benign binary classifier, activations & optimizers (Breast Cancer)
+    https://raw.githubusercontent.com/kzarre/dl/main/14.py
+
+15. Wine 3-class softmax classifier with precision, recall, confusion matrix (Wine)
+    https://raw.githubusercontent.com/kzarre/dl/main/15.py
+
+16. Temperature forecasting with LSTM, MAE & RMSE (Jena Climate)
+    https://raw.githubusercontent.com/kzarre/dl/main/16.py
+
+17. Denoising autoencoder that removes noise from images, MSE & PSNR (Fashion-MNIST)
+    https://raw.githubusercontent.com/kzarre/dl/main/17.py
+
+18. Cat vs dog CNN with vs without data augmentation (rotate/flip/zoom/shift) (Cats vs Dogs)
+    https://raw.githubusercontent.com/kzarre/dl/main/18.py
+
+19. Object detection with bounding boxes, pretrained SSD MobileNet, IoU & mAP (Pascal VOC 2007)
+    https://raw.githubusercontent.com/kzarre/dl/main/19.py
+
+20. Shakespeare text generator, character LSTM with temperature sampling (Shakespeare)
+    https://raw.githubusercontent.com/kzarre/dl/main/20.py
+
+21. Named entity recognition (person / org / location) with BiLSTM (CoNLL-2003)
+    https://raw.githubusercontent.com/kzarre/dl/main/21.py
+
+22. English to French translation, encoder-decoder with attention, BLEU (English-French)
+    https://raw.githubusercontent.com/kzarre/dl/main/22.py
+
+23. Variational autoencoder: latent space plot + generating new digits (MNIST)
+    https://raw.githubusercontent.com/kzarre/dl/main/23.py
+
+24. Credit card fraud detection with autoencoder reconstruction error (Credit Card Fraud)
+    https://raw.githubusercontent.com/kzarre/dl/main/24.py
+
+25. Pixel-wise pet segmentation with U-Net, IoU (Oxford-IIIT Pet)
+    https://raw.githubusercontent.com/kzarre/dl/main/25.py
