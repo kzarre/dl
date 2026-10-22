@@ -1,9 +1,3 @@
-"""
-Practical 11: Generative Adversarial Network (DCGAN)
-Generate synthetic images, plot generator and discriminator losses, and
-show generated samples during training.
-Dataset: Fashion-MNIST (change DATASET to "mnist" for digits)
-"""
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,18 +12,12 @@ BATCH = 256
 EPOCHS = 30
 SHOW_EVERY = 5
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 (x_train, _), _ = getattr(keras.datasets, DATASET).load_data()
-x_train = (x_train.astype("float32") - 127.5) / 127.5      # scale to [-1, 1] to match tanh output
-x_train = x_train[..., None]                                # (60000, 28, 28, 1)
+x_train = (x_train.astype("float32") - 127.5) / 127.5
+x_train = x_train[..., None]
 print("Training images:", x_train.shape, "range:", x_train.min(), x_train.max())
 dataset = tf.data.Dataset.from_tensor_slices(x_train).shuffle(60000).batch(BATCH, drop_remainder=True)
 
-# ---------------------------------------------------------------
-# Generator and discriminator
-# ---------------------------------------------------------------
 generator = keras.Sequential([
     layers.Input(shape=(LATENT_DIM,)),
     layers.Dense(7 * 7 * 256, use_bias=False),
@@ -37,9 +25,9 @@ generator = keras.Sequential([
     layers.Reshape((7, 7, 256)),
     layers.Conv2DTranspose(128, 5, strides=1, padding="same", use_bias=False),
     layers.BatchNormalization(), layers.LeakyReLU(0.2),
-    layers.Conv2DTranspose(64, 5, strides=2, padding="same", use_bias=False),      # 14x14
+    layers.Conv2DTranspose(64, 5, strides=2, padding="same", use_bias=False),
     layers.BatchNormalization(), layers.LeakyReLU(0.2),
-    layers.Conv2DTranspose(1, 5, strides=2, padding="same", activation="tanh"),    # 28x28
+    layers.Conv2DTranspose(1, 5, strides=2, padding="same", activation="tanh"),
 ], name="generator")
 
 discriminator = keras.Sequential([
@@ -47,14 +35,13 @@ discriminator = keras.Sequential([
     layers.Conv2D(64, 5, strides=2, padding="same"), layers.LeakyReLU(0.2), layers.Dropout(0.3),
     layers.Conv2D(128, 5, strides=2, padding="same"), layers.LeakyReLU(0.2), layers.Dropout(0.3),
     layers.Flatten(),
-    layers.Dense(1),                                         # logit: real vs fake
+    layers.Dense(1),
 ], name="discriminator")
 generator.summary(); discriminator.summary()
 
 bce = keras.losses.BinaryCrossentropy(from_logits=True)
 g_opt = keras.optimizers.Adam(2e-4, beta_1=0.5)
 d_opt = keras.optimizers.Adam(2e-4, beta_1=0.5)
-
 
 @tf.function
 def train_step(real):
@@ -64,14 +51,12 @@ def train_step(real):
         real_logits = discriminator(real, training=True)
         fake_logits = discriminator(fake, training=True)
         d_loss = bce(tf.ones_like(real_logits), real_logits) + bce(tf.zeros_like(fake_logits), fake_logits)
-        g_loss = bce(tf.ones_like(fake_logits), fake_logits)        # generator wants D(fake) = 1
+        g_loss = bce(tf.ones_like(fake_logits), fake_logits)
     g_opt.apply_gradients(zip(g_tape.gradient(g_loss, generator.trainable_variables), generator.trainable_variables))
     d_opt.apply_gradients(zip(d_tape.gradient(d_loss, discriminator.trainable_variables), discriminator.trainable_variables))
     return g_loss, d_loss, tf.reduce_mean(tf.sigmoid(real_logits)), tf.reduce_mean(tf.sigmoid(fake_logits))
 
-
 fixed_noise = tf.random.normal([16, LATENT_DIM])
-
 
 def show_samples(epoch):
     imgs = generator(fixed_noise, training=False).numpy()
@@ -81,10 +66,6 @@ def show_samples(epoch):
     plt.suptitle(f"Generated samples - epoch {epoch}")
     plt.savefig(f"gan_epoch_{epoch:03d}.png"); plt.show()
 
-
-# ---------------------------------------------------------------
-# Training loop
-# ---------------------------------------------------------------
 hist = {"g_loss": [], "d_loss": [], "D(x)": [], "D(G(z))": []}
 batch_g, batch_d = [], []
 show_samples(0)
@@ -102,9 +83,6 @@ for epoch in range(1, EPOCHS + 1):
     if epoch % SHOW_EVERY == 0 or epoch == 1:
         show_samples(epoch)
 
-# ---------------------------------------------------------------
-# Loss curves
-# ---------------------------------------------------------------
 fig, axes = plt.subplots(1, 3, figsize=(17, 4))
 smooth = lambda v, k=50: np.convolve(v, np.ones(k) / k, mode="valid")
 axes[0].plot(smooth(batch_g), label="generator"); axes[0].plot(smooth(batch_d), label="discriminator")
@@ -115,9 +93,6 @@ axes[2].plot(hist["D(x)"], label="D(real)"); axes[2].plot(hist["D(G(z))"], label
 axes[2].axhline(0.5, color="gray", ls="--"); axes[2].set_title("Discriminator outputs"); axes[2].legend()
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Final evaluation: real vs generated
-# ---------------------------------------------------------------
 gen = generator(tf.random.normal([10, LATENT_DIM]), training=False).numpy()
 plt.figure(figsize=(14, 3))
 for i in range(10):
@@ -125,3 +100,4 @@ for i in range(10):
     plt.subplot(2, 10, 10 + i + 1); plt.imshow((gen[i, :, :, 0] + 1) / 2, cmap="gray"); plt.axis("off")
 plt.suptitle("Real (top) vs generated (bottom)"); plt.show()
 generator.save("gan_generator.keras")
+

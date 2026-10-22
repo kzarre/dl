@@ -1,10 +1,3 @@
-"""
-Practical 21: Named Entity Recognition Using Deep Learning
-BiLSTM sequence-labelling model tagging persons, organisations,
-locations (and misc) in sentences; entity-level precision, recall, F1.
-Dataset: CoNLL-2003 (downloaded automatically from a GitHub mirror)
-pip install seqeval
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import Counter
@@ -17,12 +10,7 @@ tf.random.set_seed(42)
 MAXLEN = 60
 EMB, UNITS = 100, 128
 
-# ---------------------------------------------------------------
-# Data loading (CoNLL format: word POS chunk NER-tag)
-# If the mirror is unavailable, the same files are on Kaggle / HuggingFace "conll2003".
-# ---------------------------------------------------------------
 BASE = "https://raw.githubusercontent.com/davidsbatista/NER-datasets/master/CONLL2003/"
-
 
 def read_conll(fname):
     path = keras.utils.get_file(f"conll2003_{fname}", BASE + fname)
@@ -39,7 +27,6 @@ def read_conll(fname):
         sents.append(ws); tags.append(ts)
     return sents, tags
 
-
 train_s, train_t = read_conll("train.txt")
 val_s, val_t = read_conll("valid.txt")
 test_s, test_t = read_conll("test.txt")
@@ -47,19 +34,15 @@ print("Sentences train/val/test:", len(train_s), len(val_s), len(test_s))
 print("Example:", list(zip(train_s[0], train_t[0])))
 print("Tag counts:", Counter(t for s in train_t for t in s))
 
-# ---------------------------------------------------------------
-# Preprocessing: vocabularies, integer encoding, padding
-# ---------------------------------------------------------------
 lengths = [len(s) for s in train_s]
 print(f"Sentence length: mean {np.mean(lengths):.1f}, 99th pct {np.percentile(lengths, 99):.0f}, max {max(lengths)}")
 
 words = sorted({w.lower() for s in train_s for w in s})
-word2idx = {w: i + 2 for i, w in enumerate(words)}         # 0 = PAD, 1 = UNK
+word2idx = {w: i + 2 for i, w in enumerate(words)}
 tag_list = ["PAD"] + sorted({t for s in train_t for t in s})
 tag2idx = {t: i for i, t in enumerate(tag_list)}
 N_TAGS = len(tag_list)
 print("Vocab:", len(word2idx) + 2, "| tags:", tag_list)
-
 
 def encode(sents, tags):
     X = [[word2idx.get(w.lower(), 1) for w in s] for s in sents]
@@ -68,18 +51,14 @@ def encode(sents, tags):
     Y = keras.utils.pad_sequences(Y, maxlen=MAXLEN, padding="post", truncating="post")
     return X, Y
 
-
 X_train, y_train = encode(train_s, train_t)
 X_val, y_val = encode(val_s, val_t)
 X_test, y_test = encode(test_s, test_t)
 print("X_train:", X_train.shape, "y_train:", y_train.shape)
 
-# ---------------------------------------------------------------
-# BiLSTM tagger
-# ---------------------------------------------------------------
 model = keras.Sequential([
     layers.Input(shape=(MAXLEN,)),
-    layers.Embedding(len(word2idx) + 2, EMB, mask_zero=True),     # padding positions are masked
+    layers.Embedding(len(word2idx) + 2, EMB, mask_zero=True),
     layers.Bidirectional(layers.LSTM(UNITS, return_sequences=True)),
     layers.Dropout(0.3),
     layers.TimeDistributed(layers.Dense(N_TAGS, activation="softmax")),
@@ -96,18 +75,13 @@ for ax, m in zip(axes, ["loss", "accuracy"]):
     ax.set_title(f"{m} (token level)"); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-
-# ---------------------------------------------------------------
-# Evaluation: entity-level precision / recall / F1
-# ---------------------------------------------------------------
 def decode(pred_ids, ref_tags):
     out = []
     for p, ref in zip(pred_ids, ref_tags):
         seq = [tag_list[i] if tag_list[i] != "PAD" else "O" for i in p[:min(len(ref), MAXLEN)]]
-        seq += ["O"] * (len(ref) - len(seq))                     # sentences longer than MAXLEN
+        seq += ["O"] * (len(ref) - len(seq))
         out.append(seq)
     return out
-
 
 pred = np.argmax(model.predict(X_test, verbose=0), axis=-1)
 y_pred_tags = decode(pred, test_t)
@@ -123,14 +97,13 @@ for i, m in enumerate(["precision", "recall", "f1-score"]):
     plt.bar(x + i * 0.25, [report[e][m] for e in ents], width=0.25, label=m)
 plt.xticks(x + 0.25, ents); plt.ylim(0, 1); plt.legend(); plt.title("Entity-level scores"); plt.show()
 
-
 def tag_sentence(sentence):
     toks = sentence.split()
     x = keras.utils.pad_sequences([[word2idx.get(w.lower(), 1) for w in toks]], maxlen=MAXLEN, padding="post")
     p = np.argmax(model.predict(x, verbose=0)[0], axis=-1)[:len(toks)]
     return [(w, tag_list[i]) for w, i in zip(toks, p)]
 
-
 for s in ["Sundar Pichai met officials of the European Union in Brussels on Monday .",
           "Virat Kohli scored a century for India against Australia in Melbourne ."]:
     print(tag_sentence(s))
+

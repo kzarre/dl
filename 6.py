@@ -1,9 +1,3 @@
-"""
-Practical 6: Autoencoder Implementation
-Compress MNIST digits to a 32-d code and reconstruct them; show original vs
-reconstructed images and report reconstruction error.
-Dataset: MNIST
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -13,17 +7,11 @@ from tensorflow.keras import layers
 tf.random.set_seed(42)
 LATENT = 32
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 (x_train, _), (x_test, y_test) = keras.datasets.mnist.load_data()
 x_train = x_train.reshape(-1, 784).astype("float32") / 255.0
 x_test = x_test.reshape(-1, 784).astype("float32") / 255.0
 print("Train:", x_train.shape, "Test:", x_test.shape, "| pixel range:", x_train.min(), x_train.max())
 
-# ---------------------------------------------------------------
-# Model: encoder + decoder
-# ---------------------------------------------------------------
 encoder = keras.Sequential([
     layers.Input(shape=(784,)),
     layers.Dense(128, activation="relu"),
@@ -35,7 +23,7 @@ decoder = keras.Sequential([
     layers.Input(shape=(LATENT,)),
     layers.Dense(64, activation="relu"),
     layers.Dense(128, activation="relu"),
-    layers.Dense(784, activation="sigmoid"),       # pixels in [0, 1]
+    layers.Dense(784, activation="sigmoid"),
 ], name="decoder")
 
 inputs = keras.Input(shape=(784,))
@@ -44,18 +32,12 @@ encoder.summary(); decoder.summary(); autoencoder.summary()
 print(f"Compression: 784 -> {LATENT} values ({784 / LATENT:.1f}x)")
 
 autoencoder.compile(optimizer="adam", loss="mse")
-history = autoencoder.fit(x_train, x_train,                 # input = target
+history = autoencoder.fit(x_train, x_train,
                           epochs=20, batch_size=256, validation_data=(x_test, x_test), verbose=2)
 
-# ---------------------------------------------------------------
-# Training curve
-# ---------------------------------------------------------------
 plt.plot(history.history["loss"], label="train"); plt.plot(history.history["val_loss"], label="validation")
 plt.title("Reconstruction loss (MSE)"); plt.xlabel("epoch"); plt.legend(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation
-# ---------------------------------------------------------------
 recon = autoencoder.predict(x_test, verbose=0)
 per_image_mse = np.mean((x_test - recon) ** 2, axis=1)
 print(f"Mean reconstruction MSE on test set: {per_image_mse.mean():.5f}")
@@ -82,3 +64,4 @@ plt.suptitle("Worst reconstructions"); plt.show()
 
 codes = encoder.predict(x_test, verbose=0)
 print("Encoded representation shape:", codes.shape)
+

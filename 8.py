@@ -1,10 +1,3 @@
-"""
-Practical 8: ResNet50 Transfer Learning and Image Captioning
-Extract image features with pretrained ResNet50, then train a CNN + LSTM
-caption generator (merge architecture). Evaluate with BLEU.
-Dataset: Flickr8k (downloaded automatically, ~1 GB)
-pip install nltk
-"""
 import os
 import re
 import glob
@@ -24,7 +17,6 @@ random.seed(42)
 tf.random.set_seed(42)
 AUTOTUNE = tf.data.AUTOTUNE
 
-
 def download_and_unzip(url, out_dir):
     zpath = keras.utils.get_file(fname=os.path.basename(url), origin=url,
                                  cache_dir=".", cache_subdir="downloads")
@@ -32,7 +24,6 @@ def download_and_unzip(url, out_dir):
         with zipfile.ZipFile(zpath) as z:
             z.extractall(out_dir)
     return out_dir
-
 
 BASE = "https://github.com/jbrownlee/Datasets/releases/download/Flickr8k/"
 download_and_unzip(BASE + "Flickr8k_Dataset.zip", "flickr8k/images")
@@ -42,12 +33,9 @@ img_paths = sorted(glob.glob("flickr8k/images/**/*.jpg", recursive=True))
 find = lambda name: glob.glob(f"flickr8k/text/**/{name}", recursive=True)[0]
 print("Images found:", len(img_paths))
 
-# ---------------------------------------------------------------
-# Step 1: ResNet50 feature extraction (transfer learning)
-# ---------------------------------------------------------------
 FEATURE_FILE = "flickr8k_resnet50_features.pkl"
 resnet = keras.applications.ResNet50(weights="imagenet", include_top=False, pooling="avg")
-print("ResNet50 output shape:", resnet.output_shape)            # (None, 2048)
+print("ResNet50 output shape:", resnet.output_shape)
 
 if os.path.exists(FEATURE_FILE):
     features = pickle.load(open(FEATURE_FILE, "rb"))
@@ -62,14 +50,10 @@ else:
     pickle.dump(features, open(FEATURE_FILE, "wb"))
 print("Feature vectors:", len(features))
 
-# ---------------------------------------------------------------
-# Step 2: Caption preprocessing
-# ---------------------------------------------------------------
 def clean(caption):
     caption = re.sub(r"[^a-z ]", "", caption.lower())
     words = [w for w in caption.split() if len(w) > 1 or w == "a"]
     return "startseq " + " ".join(words) + " endseq"
-
 
 captions = defaultdict(list)
 for line in open(find("Flickr8k.token.txt"), encoding="utf-8"):
@@ -89,17 +73,15 @@ print("Train/Val/Test images:", len(train_imgs), len(val_imgs), len(test_imgs))
 print("Example captions:", captions[train_imgs[0]][:2])
 
 counts = Counter(w for img in train_imgs for c in captions[img] for w in c.split())
-vocab = sorted(w for w, c in counts.items() if c >= 5)          # drop rare words
-word2idx = {w: i + 1 for i, w in enumerate(vocab)}               # 0 = padding
+vocab = sorted(w for w, c in counts.items() if c >= 5)
+word2idx = {w: i + 1 for i, w in enumerate(vocab)}
 idx2word = {i: w for w, i in word2idx.items()}
 VOCAB_SIZE = len(word2idx) + 1
 encode = lambda cap: [word2idx[w] for w in cap.split() if w in word2idx]
 MAX_LEN = max(len(encode(c)) for img in train_imgs for c in captions[img])
 print("Vocabulary size:", VOCAB_SIZE, "| max caption length:", MAX_LEN)
 
-
 def data_generator(img_list, images_per_batch=32):
-    """Each caption 'a dog runs' becomes pairs: (img, [startseq]) -> a, (img, [startseq a]) -> dog ..."""
     while True:
         random.shuffle(img_list)
         for i in range(0, len(img_list), images_per_batch):
@@ -112,10 +94,6 @@ def data_generator(img_list, images_per_batch=32):
             X2 = keras.utils.pad_sequences(X2, maxlen=MAX_LEN, padding="post")
             yield (np.array(X1, dtype="float32"), X2), np.array(Y)
 
-
-# ---------------------------------------------------------------
-# Step 3: CNN features + LSTM decoder (merge model)
-# ---------------------------------------------------------------
 img_in = keras.Input(shape=(2048,), name="image_features")
 fe = layers.Dropout(0.4)(img_in)
 fe = layers.Dense(256, activation="relu")(fe)
@@ -144,10 +122,6 @@ for ax, m in zip(axes, ["loss", "accuracy"]):
     ax.set_title(m); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-
-# ---------------------------------------------------------------
-# Step 4: Caption generation + BLEU evaluation
-# ---------------------------------------------------------------
 def generate_caption(feature):
     words = ["startseq"]
     for _ in range(MAX_LEN):
@@ -158,7 +132,6 @@ def generate_caption(feature):
             break
         words.append(word)
     return " ".join(words[1:])
-
 
 N_EVAL = 200
 refs, hyps = [], []
@@ -175,3 +148,4 @@ for i, img in enumerate(test_imgs[:6]):
     plt.subplot(2, 3, i + 1); plt.imshow(plt.imread(os.path.join(img_dir, img))); plt.axis("off")
     plt.title(f"PRED: {generate_caption(features[img])}\nTRUE: {captions[img][0][9:-7]}", fontsize=9)
 plt.tight_layout(); plt.show()
+

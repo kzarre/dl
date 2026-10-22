@@ -1,9 +1,3 @@
-"""
-Practical 13: Multilayer Perceptron for Classification
-Compare MLPs with different numbers of hidden layers, neurons and
-activation functions (sigmoid, tanh, ReLU).
-Dataset: Fashion-MNIST
-"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,9 +11,6 @@ CLASS_NAMES = ["T-shirt", "Trouser", "Pullover", "Dress", "Coat",
                "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
 EPOCHS, BATCH = 10, 128
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 (x_train, y_train), (x_test, y_test) = keras.datasets.fashion_mnist.load_data()
 plt.figure(figsize=(10, 2))
 for i in range(10):
@@ -30,7 +21,6 @@ x_train = x_train.reshape(-1, 784).astype("float32") / 255.0
 x_test = x_test.reshape(-1, 784).astype("float32") / 255.0
 print("Train:", x_train.shape, "Test:", x_test.shape)
 
-
 def build_mlp(hidden_layers, activation, name):
     model = keras.Sequential(name=name)
     model.add(layers.Input(shape=(784,)))
@@ -39,7 +29,6 @@ def build_mlp(hidden_layers, activation, name):
     model.add(layers.Dense(10, activation="softmax"))
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
     return model
-
 
 experiments = {
     "Depth": {
@@ -72,9 +61,6 @@ for group, configs in experiments.items():
                      "test_acc": acc})
         histories[name], models[name] = h, model
 
-# ---------------------------------------------------------------
-# Training curves per experiment group
-# ---------------------------------------------------------------
 fig, axes = plt.subplots(2, 3, figsize=(17, 8))
 for col, (group, configs) in enumerate(experiments.items()):
     for name in configs:
@@ -84,9 +70,6 @@ for col, (group, configs) in enumerate(experiments.items()):
     for r in range(2): axes[r, col].legend(fontsize=8); axes[r, col].set_xlabel("epoch")
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation
-# ---------------------------------------------------------------
 res = pd.DataFrame(rows)
 print(res.round(4).to_string(index=False))
 res.set_index("config")["test_acc"].plot(kind="barh", figsize=(8, 5), xlim=(0.8, 0.92), title="Test accuracy")
@@ -99,3 +82,4 @@ print(classification_report(y_test, y_pred, target_names=CLASS_NAMES, digits=4))
 ConfusionMatrixDisplay(confusion_matrix(y_test, y_pred), display_labels=CLASS_NAMES).plot(
     cmap="Blues", xticks_rotation=45)
 plt.title(f"Confusion matrix - {best_name}"); plt.show()
+

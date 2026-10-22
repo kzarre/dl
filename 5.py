@@ -1,8 +1,3 @@
-"""
-Practical 5: Sentiment Analysis Using RNN, LSTM and GRU
-Compare accuracy, training time and handling of long reviews.
-Dataset: IMDB (built into Keras)
-"""
 import time
 import numpy as np
 import pandas as pd
@@ -20,9 +15,6 @@ UNITS = 64
 EPOCHS = 5
 BATCH = 128
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 (x_train, y_train), (x_test, y_test) = keras.datasets.imdb.load_data(num_words=VOCAB)
 print("Train:", len(x_train), "Test:", len(x_test), "| positive share:", y_train.mean())
 
@@ -39,15 +31,10 @@ index_word.update({0: "<pad>", 1: "<start>", 2: "<unk>", 3: "<unused>"})
 print("Decoded review:", " ".join(index_word.get(i, "?") for i in x_train[0][:60]), "...")
 print("Label:", y_train[0])
 
-# pre-padding/pre-truncating keeps the END of each review next to the final RNN state
 x_train = keras.utils.pad_sequences(x_train, maxlen=MAXLEN, padding="pre", truncating="pre")
 x_test = keras.utils.pad_sequences(x_test, maxlen=MAXLEN, padding="pre", truncating="pre")
 print("Padded shape:", x_train.shape)
 
-
-# ---------------------------------------------------------------
-# Models
-# ---------------------------------------------------------------
 def build(cell_name):
     cell = {"SimpleRNN": layers.SimpleRNN, "LSTM": layers.LSTM, "GRU": layers.GRU}[cell_name]
     model = keras.Sequential([
@@ -59,7 +46,6 @@ def build(cell_name):
     ], name=cell_name)
     model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
     return model
-
 
 histories, rows, preds = {}, [], {}
 for name in ["SimpleRNN", "LSTM", "GRU"]:
@@ -74,9 +60,6 @@ for name in ["SimpleRNN", "LSTM", "GRU"]:
     rows.append({"model": name, "test_accuracy": acc, "test_loss": loss,
                  "train_time_s": train_time, "params": model.count_params()})
 
-# ---------------------------------------------------------------
-# Training curves
-# ---------------------------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 for name, h in histories.items():
     axes[0].plot(h.history["val_accuracy"], label=f"{name} val")
@@ -86,9 +69,6 @@ axes[0].set_title("Accuracy"); axes[1].set_title("Validation loss")
 for ax in axes: ax.set_xlabel("epoch"); ax.legend(fontsize=8)
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation: accuracy, time, long-review handling
-# ---------------------------------------------------------------
 res = pd.DataFrame(rows).set_index("model")
 print(res.round(4))
 
@@ -107,3 +87,4 @@ res["train_time_s"].plot(kind="bar", ax=axes[1], rot=0, title="Training time (s)
 plt.tight_layout(); plt.show()
 print("\nObservation: SimpleRNN suffers from vanishing gradients on long sequences; "
       "LSTM/GRU gates keep long-range information, GRU is usually faster than LSTM.")
+

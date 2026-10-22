@@ -1,10 +1,3 @@
-"""
-Practical 22: Attention-Based Neural Machine Translation
-LSTM encoder-decoder with (Luong-style dot-product) attention translating
-English -> French; evaluated with BLEU; attention heat-map shown.
-Dataset: English-French sentence pairs (ManyThings / Tatoeba, downloaded automatically)
-pip install nltk
-"""
 import os
 import glob
 import random
@@ -24,9 +17,6 @@ VOCAB = 15000
 EMB, UNITS = 256, 512
 EPOCHS, BATCH = 15, 64
 
-# ---------------------------------------------------------------
-# Data loading
-# ---------------------------------------------------------------
 url = "http://storage.googleapis.com/download.tensorflow.org/data/fra-eng.zip"
 zpath = keras.utils.get_file(fname="fra-eng.zip", origin=url, cache_dir=".", cache_subdir="downloads")
 if not os.path.exists("fra_eng"):
@@ -46,16 +36,11 @@ val_pairs = pairs[-(n_val + n_test):-n_test]
 test_pairs = pairs[-n_test:]
 print("Train/val/test pairs:", len(train_pairs), len(val_pairs), len(test_pairs))
 
-
-# ---------------------------------------------------------------
-# Preprocessing: standardise, tokenise, integer-encode
-# ---------------------------------------------------------------
 def standardize(s):
     s = tf.strings.lower(s)
     s = tf.strings.regex_replace(s, "[  ]", " ")
-    s = tf.strings.regex_replace(s, r'[.?!,¿¡"«»:;()\-]', "")      # keep [start]/[end] brackets
+    s = tf.strings.regex_replace(s, r'[.?!,¿¡"«»:;()\-]', "")
     return tf.strings.strip(s)
-
 
 eng_vec = layers.TextVectorization(VOCAB, output_sequence_length=SEQ_LEN, standardize=standardize)
 fra_vec = layers.TextVectorization(VOCAB, output_sequence_length=SEQ_LEN + 1, standardize=standardize)
@@ -66,21 +51,16 @@ fr_vocab = fra_vec.get_vocabulary()
 START, END = fr_vocab.index("[start]"), fr_vocab.index("[end]")
 print("English vocab:", EN_V, "| French vocab:", FR_V)
 
-
 def vectorize(pairs_):
     enc = eng_vec([p[0] for p in pairs_]).numpy()
     fr = fra_vec([p[1] for p in pairs_]).numpy()
-    return (enc, fr[:, :-1]), fr[:, 1:]           # teacher forcing: decoder input shifted by one
-
+    return (enc, fr[:, :-1]), fr[:, 1:]
 
 (tr_enc, tr_dec), tr_y = vectorize(train_pairs)
 (va_enc, va_dec), va_y = vectorize(val_pairs)
 print("Encoder input:", tr_enc.shape, "Decoder input:", tr_dec.shape, "Target:", tr_y.shape)
 print("Example decoder in :", tr_dec[0][:8], "\nExample target     :", tr_y[0][:8])
 
-# ---------------------------------------------------------------
-# Encoder-decoder with attention
-# ---------------------------------------------------------------
 enc_in = keras.Input(shape=(SEQ_LEN,), dtype="int64", name="english")
 x = layers.Embedding(EN_V, EMB, mask_zero=True)(enc_in)
 enc_out, h, c = layers.LSTM(UNITS, return_sequences=True, return_state=True, name="encoder_lstm")(x)
@@ -109,10 +89,6 @@ for ax, m in zip(axes, ["loss", "accuracy"]):
     ax.set_title(m); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-
-# ---------------------------------------------------------------
-# Greedy decoding
-# ---------------------------------------------------------------
 def translate(sentence):
     enc = eng_vec([sentence])
     dec = np.zeros((1, SEQ_LEN), dtype="int64"); dec[0, 0] = START
@@ -125,14 +101,10 @@ def translate(sentence):
         words.append(fr_vocab[nid]); dec[0, i + 1] = nid
     return " ".join(words), enc, dec
 
-
-# ---------------------------------------------------------------
-# Evaluation: BLEU
-# ---------------------------------------------------------------
 N_EVAL = 300
 refs, hyps = [], []
 for eng, fra in test_pairs[:N_EVAL]:
-    ref = standardize(fra).numpy().decode("utf-8").split()[1:-1]     # drop [start]/[end]
+    ref = standardize(fra).numpy().decode("utf-8").split()[1:-1]
     refs.append([ref]); hyps.append(translate(eng)[0].split())
 sm = SmoothingFunction().method1
 print(f"BLEU-1: {corpus_bleu(refs, hyps, weights=(1, 0, 0, 0), smoothing_function=sm):.4f}")
@@ -141,9 +113,6 @@ print(f"BLEU-4: {corpus_bleu(refs, hyps, smoothing_function=sm):.4f}")
 for eng, fra in test_pairs[:8]:
     print(f"EN : {eng}\nREF: {fra[8:-6]}\nOUT: {translate(eng)[0]}\n")
 
-# ---------------------------------------------------------------
-# Attention heat-map
-# ---------------------------------------------------------------
 sentence = test_pairs[0][0]
 out, enc, dec = translate(sentence)
 scores = attention_model([enc, dec], training=False)[0].numpy()
@@ -154,3 +123,4 @@ plt.imshow(scores[:len(tgt), :len(src)], cmap="viridis")
 plt.xticks(range(len(src)), src, rotation=45); plt.yticks(range(len(tgt)), tgt)
 plt.xlabel("English (source)"); plt.ylabel("French (generated)"); plt.title("Attention weights"); plt.colorbar()
 plt.tight_layout(); plt.show()
+

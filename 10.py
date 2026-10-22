@@ -1,10 +1,3 @@
-"""
-Practical 10: Sentiment Analysis on Network Graphs Using RNN
-LSTM tweet sentiment classifier + user @mention graph coloured by sentiment.
-Dataset: Sentiment140 (Kaggle: kazanova/sentiment140) ->
-         training.1600000.processed.noemoticon.csv next to this script.
-pip install networkx
-"""
 import re
 import numpy as np
 import pandas as pd
@@ -21,16 +14,12 @@ CSV = "training.1600000.processed.noemoticon.csv"
 SAMPLE = 200_000
 VOCAB, MAXLEN = 20000, 40
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 cols = ["target", "id", "date", "flag", "user", "text"]
 df = pd.read_csv(CSV, encoding="latin-1", names=cols)
 df = df.sample(SAMPLE, random_state=42).reset_index(drop=True)
-df["label"] = (df.target == 4).astype(int)                       # 0 = negative, 4 = positive
+df["label"] = (df.target == 4).astype(int)
 print(df[["user", "text", "label"]].head())
 print("Class balance:", df.label.value_counts().to_dict())
-
 
 def clean(t):
     t = t.lower()
@@ -38,7 +27,6 @@ def clean(t):
     t = re.sub(r"@\w+", " @user ", t)
     t = re.sub(r"[^a-z@\s']", " ", t)
     return re.sub(r"\s+", " ", t).strip()
-
 
 df["clean"] = df.text.apply(clean)
 df["mentions"] = df.text.apply(lambda t: [m.lower() for m in re.findall(r"@(\w+)", t)])
@@ -50,9 +38,6 @@ vectorizer.adapt(X_tr)
 X_tr_seq, X_te_seq = vectorizer(X_tr).numpy(), vectorizer(X_te).numpy()
 print("Vectorized:", X_tr_seq.shape, "| example:", X_tr[0], "->", X_tr_seq[0][:12])
 
-# ---------------------------------------------------------------
-# LSTM model
-# ---------------------------------------------------------------
 model = keras.Sequential([
     layers.Input(shape=(MAXLEN,)),
     layers.Embedding(VOCAB, 64, mask_zero=True),
@@ -75,9 +60,6 @@ print(classification_report(y_te, y_pred, target_names=["negative", "positive"],
 ConfusionMatrixDisplay(confusion_matrix(y_te, y_pred), display_labels=["neg", "pos"]).plot(cmap="Blues")
 plt.show()
 
-# ---------------------------------------------------------------
-# User interaction graph (@mentions)
-# ---------------------------------------------------------------
 df["sentiment"] = model.predict(vectorizer(df.clean.values).numpy(), batch_size=1024, verbose=0).ravel()
 
 G = nx.DiGraph()
@@ -91,8 +73,6 @@ for user, mentions, s in zip(df.user.str.lower(), df.mentions, df.sentiment):
             G.add_edge(user, m, sent=[s])
 print(f"Graph: {G.number_of_nodes()} users, {G.number_of_edges()} mention edges")
 
-# node sentiment = mean sentiment of tweets the user wrote; for users who only get
-# mentioned, use the mean sentiment of tweets mentioning them
 authored = df.groupby(df.user.str.lower())["sentiment"].mean().to_dict()
 for n in G.nodes:
     if n in authored:
@@ -107,7 +87,6 @@ print(f"Positive mention edges: {pos_edges / G.number_of_edges():.2%}")
 top = sorted(G.degree, key=lambda x: x[1], reverse=True)[:10]
 print("Most connected users:", [(u, d, round(G.nodes[u]["sentiment"], 2)) for u, d in top])
 
-# visualise the neighbourhoods of the 25 most-mentioned users
 hubs = [u for u, _ in sorted(G.in_degree, key=lambda x: x[1], reverse=True)[:25]]
 nodes = set(hubs)
 for h in hubs:
@@ -126,3 +105,4 @@ plt.title("@mention network coloured by sentiment"); plt.axis("off"); plt.show()
 
 plt.hist([G.nodes[n]["sentiment"] for n in G.nodes], bins=30, color="tab:purple")
 plt.title("Sentiment distribution across users"); plt.xlabel("mean predicted sentiment"); plt.show()
+

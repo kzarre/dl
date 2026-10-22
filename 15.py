@@ -1,9 +1,3 @@
-"""
-Practical 15: Multiclass Classification Using Softmax
-Softmax output + categorical cross-entropy to classify wines into 3 classes;
-report accuracy, precision, recall and confusion matrix.
-Dataset: Wine (sklearn)
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -18,9 +12,6 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_s
 tf.random.set_seed(42)
 np.random.seed(42)
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 data = load_wine(as_frame=True)
 print(data.frame.head())
 print("Shape:", data.frame.shape, "| missing:", data.frame.isnull().sum().sum())
@@ -28,22 +19,19 @@ print("Classes:", data.target_names, "| counts:", np.bincount(data.target))
 
 X, y = data.data.values.astype("float32"), data.target.values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, stratify=y, random_state=42)
-scaler = StandardScaler().fit(X_train)                 # features have very different scales
+scaler = StandardScaler().fit(X_train)
 X_train, X_test = scaler.transform(X_train), scaler.transform(X_test)
 
-y_train_oh = keras.utils.to_categorical(y_train, 3)   # one-hot for categorical cross-entropy
+y_train_oh = keras.utils.to_categorical(y_train, 3)
 y_test_oh = keras.utils.to_categorical(y_test, 3)
 print("One-hot example:", y_train[0], "->", y_train_oh[0])
 
-# ---------------------------------------------------------------
-# Model
-# ---------------------------------------------------------------
 model = keras.Sequential([
     layers.Input(shape=(X.shape[1],)),
     layers.Dense(32, activation="relu"),
     layers.Dropout(0.2),
     layers.Dense(16, activation="relu"),
-    layers.Dense(3, activation="softmax"),             # probabilities over 3 classes, sum = 1
+    layers.Dense(3, activation="softmax"),
 ], name="wine_softmax")
 model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 model.summary()
@@ -58,9 +46,6 @@ for ax, m in zip(axes, ["loss", "accuracy"]):
     ax.set_title(m); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation
-# ---------------------------------------------------------------
 loss, acc = model.evaluate(X_test, y_test_oh, verbose=0)
 probs = model.predict(X_test, verbose=0)
 y_pred = np.argmax(probs, axis=1)
@@ -76,3 +61,4 @@ plt.title("Confusion matrix"); plt.show()
 print("Softmax output for first 5 test samples:")
 for p, t in zip(probs[:5], y_test[:5]):
     print(np.round(p, 3), "sum =", round(float(p.sum()), 3), "| true:", t)
+

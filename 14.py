@@ -1,9 +1,3 @@
-"""
-Practical 14: Binary Classification Using Deep Neural Networks
-Feedforward network for malignant vs benign tumours with binary
-cross-entropy; compare activations and optimizers.
-Dataset: Breast Cancer Wisconsin (sklearn)
-"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -19,20 +13,16 @@ from sklearn.metrics import (classification_report, confusion_matrix, ConfusionM
 tf.random.set_seed(42)
 np.random.seed(42)
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 data = load_breast_cancer(as_frame=True)
 df = data.frame
 print(df.iloc[:, :6].head())
 print("Shape:", df.shape, "| missing values:", df.isnull().sum().sum())
-print("Target names:", data.target_names, "| counts:", np.bincount(data.target))   # 0 malignant, 1 benign
+print("Target names:", data.target_names, "| counts:", np.bincount(data.target))
 
 X, y = data.data.values.astype("float32"), data.target.values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 scaler = StandardScaler().fit(X_train)
 X_train, X_test = scaler.transform(X_train), scaler.transform(X_test)
-
 
 def build(activation, optimizer, name):
     model = keras.Sequential([
@@ -40,17 +30,16 @@ def build(activation, optimizer, name):
         layers.Dense(32, activation=activation),
         layers.Dropout(0.2),
         layers.Dense(16, activation=activation),
-        layers.Dense(1, activation="sigmoid"),             # probability of class 1 (benign)
+        layers.Dense(1, activation="sigmoid"),
     ], name=name)
     model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"])
     return model
 
-
 make_opt = {"SGD": lambda: keras.optimizers.SGD(0.01, momentum=0.9),
             "Adam": lambda: keras.optimizers.Adam(1e-3),
             "RMSprop": lambda: keras.optimizers.RMSprop(1e-3)}
-configs = [("relu", "Adam"), ("tanh", "Adam"), ("sigmoid", "Adam"),      # activation comparison
-           ("relu", "SGD"), ("relu", "RMSprop")]                          # optimizer comparison
+configs = [("relu", "Adam"), ("tanh", "Adam"), ("sigmoid", "Adam"),
+           ("relu", "SGD"), ("relu", "RMSprop")]
 
 rows, histories, models = [], {}, {}
 for act, opt in configs:
@@ -66,9 +55,6 @@ for act, opt in configs:
     histories[name], models[name] = h, model
     print(f"{name:14s} test acc {acc:.4f}")
 
-# ---------------------------------------------------------------
-# Training curves
-# ---------------------------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(13, 4))
 for name, h in histories.items():
     axes[0].plot(h.history["val_loss"], label=name)
@@ -85,9 +71,6 @@ for ax, m in zip(axes, ["loss", "accuracy"]):
     ax.set_title(f"{best}: {m}"); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation
-# ---------------------------------------------------------------
 res = pd.DataFrame(rows).set_index("model")
 print(res.round(4))
 print("Best model:", best)
@@ -97,3 +80,4 @@ print(classification_report(y_test, y_pred, target_names=data.target_names, digi
 ConfusionMatrixDisplay(confusion_matrix(y_test, y_pred), display_labels=data.target_names).plot(cmap="Blues")
 plt.title(f"Confusion matrix - {best}"); plt.show()
 RocCurveDisplay.from_predictions(y_test, prob, name=best); plt.plot([0, 1], [0, 1], "k--"); plt.show()
+

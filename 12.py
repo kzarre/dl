@@ -1,9 +1,3 @@
-"""
-Practical 12: Transformer-Based Text Classification
-Self-attention Transformer vs LSTM for 4-class news classification
-(accuracy and training time).
-Dataset: AG News (tensorflow_datasets: ag_news_subset)
-"""
 import time
 import numpy as np
 import pandas as pd
@@ -19,13 +13,9 @@ VOCAB, MAXLEN = 20000, 100
 EMBED_DIM, NUM_HEADS, FF_DIM = 64, 4, 128
 EPOCHS, BATCH = 3, 128
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 (train_raw, test_raw), info = tfds.load("ag_news_subset", split=["train", "test"], with_info=True)
-CLASS_NAMES = info.features["label"].names                     # World, Sports, Business, Sci/Tech
+CLASS_NAMES = info.features["label"].names
 print("Classes:", CLASS_NAMES)
-
 
 def to_arrays(ds):
     texts, labels = [], []
@@ -33,7 +23,6 @@ def to_arrays(ds):
         texts += [(t + b" " + d).decode("utf-8") for t, d in zip(b["title"], b["description"])]
         labels += b["label"].tolist()
     return np.array(texts), np.array(labels)
-
 
 x_train_txt, y_train = to_arrays(train_raw)
 x_test_txt, y_test = to_arrays(test_raw)
@@ -49,20 +38,14 @@ x_train = vectorizer(x_train_txt).numpy().astype("int32")
 x_test = vectorizer(x_test_txt).numpy().astype("int32")
 print("Sequence tensor:", x_train.shape)
 
-
-# ---------------------------------------------------------------
-# Transformer building blocks
-# ---------------------------------------------------------------
 class TokenAndPositionEmbedding(layers.Layer):
     def __init__(self, maxlen, vocab_size, embed_dim, **kwargs):
         super().__init__(**kwargs)
         self.token_emb = layers.Embedding(vocab_size, embed_dim)
         self.pos_emb = layers.Embedding(maxlen, embed_dim)
-
     def call(self, x):
         positions = tf.range(start=0, limit=tf.shape(x)[-1], delta=1)
         return self.token_emb(x) + self.pos_emb(positions)
-
 
 class TransformerBlock(layers.Layer):
     def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1, **kwargs):
@@ -73,13 +56,11 @@ class TransformerBlock(layers.Layer):
         self.norm2 = layers.LayerNormalization(epsilon=1e-6)
         self.drop1 = layers.Dropout(rate)
         self.drop2 = layers.Dropout(rate)
-
     def call(self, x, training=None):
-        attn = self.att(x, x, training=training)                       # self-attention: Q = K = V = x
-        x = self.norm1(x + self.drop1(attn, training=training))         # residual + layer norm
+        attn = self.att(x, x, training=training)
+        x = self.norm1(x + self.drop1(attn, training=training))
         ffn = self.ffn(x)
         return self.norm2(x + self.drop2(ffn, training=training))
-
 
 def build_transformer():
     inputs = keras.Input(shape=(MAXLEN,), dtype="int32")
@@ -91,7 +72,6 @@ def build_transformer():
     outputs = layers.Dense(4, activation="softmax")(x)
     return keras.Model(inputs, outputs, name="transformer_classifier")
 
-
 def build_lstm():
     return keras.Sequential([
         layers.Input(shape=(MAXLEN,), dtype="int32"),
@@ -101,7 +81,6 @@ def build_lstm():
         layers.Dense(64, activation="relu"),
         layers.Dense(4, activation="softmax"),
     ], name="lstm_classifier")
-
 
 rows, histories, models = [], {}, {}
 for build in [build_transformer, build_lstm]:
@@ -116,9 +95,6 @@ for build in [build_transformer, build_lstm]:
                  "train_time_s": t, "time_per_epoch_s": t / EPOCHS, "params": model.count_params()})
     histories[model.name], models[model.name] = h, model
 
-# ---------------------------------------------------------------
-# Training curves
-# ---------------------------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 for name, h in histories.items():
     for ax, m in zip(axes, ["accuracy", "loss"]):
@@ -127,9 +103,6 @@ for name, h in histories.items():
 for ax, m in zip(axes, ["accuracy", "loss"]): ax.set_title(m); ax.set_xlabel("epoch"); ax.legend(fontsize=8)
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation and comparison
-# ---------------------------------------------------------------
 res = pd.DataFrame(rows).set_index("model")
 print(res.round(4))
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
@@ -150,3 +123,4 @@ headlines = ["Stocks rally as central bank holds interest rates steady",
 probs = tr.predict(vectorizer(np.array(headlines)).numpy().astype("int32"), verbose=0)
 for h, p in zip(headlines, probs):
     print(f"{CLASS_NAMES[np.argmax(p)]:10s} ({p.max():.2f})  {h}")
+

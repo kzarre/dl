@@ -1,9 +1,3 @@
-"""
-Practical 16: Time-Series Forecasting Using LSTM
-Forecast the next hour's temperature from the past 24 hours;
-compare predicted vs actual with MAE and RMSE.
-Dataset: Jena Climate 2009-2016 (downloaded automatically)
-"""
 import os
 import glob
 import zipfile
@@ -15,12 +9,9 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 tf.random.set_seed(42)
-PAST = 24           # hours of history per sample
+PAST = 24
 BATCH = 256
 
-# ---------------------------------------------------------------
-# Data loading
-# ---------------------------------------------------------------
 url = "https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip"
 zpath = keras.utils.get_file(fname="jena_climate_2009_2016.csv.zip", origin=url, cache_dir=".", cache_subdir="downloads")
 if not os.path.exists("jena"):
@@ -29,12 +20,9 @@ if not os.path.exists("jena"):
 df = pd.read_csv(glob.glob("jena/**/*.csv", recursive=True)[0])
 print(df.head()); print("Raw shape (10-minute readings):", df.shape)
 
-# ---------------------------------------------------------------
-# Preprocessing
-# ---------------------------------------------------------------
-df = df[5::6].copy()                                             # one reading per hour
+df = df[5::6].copy()
 df.index = pd.to_datetime(df.pop("Date Time"), format="%d.%m.%Y %H:%M:%S")
-df.loc[df["wv (m/s)"] < 0, "wv (m/s)"] = 0.0                     # fix -9999 sensor errors
+df.loc[df["wv (m/s)"] < 0, "wv (m/s)"] = 0.0
 hour = df.index.hour + df.index.minute / 60
 df["day_sin"], df["day_cos"] = np.sin(2 * np.pi * hour / 24), np.cos(2 * np.pi * hour / 24)
 doy = df.index.dayofyear
@@ -47,17 +35,14 @@ df["T (degC)"].plot(figsize=(12, 3), title="Temperature (degC)"); plt.show()
 
 data = df[FEATURES].values.astype("float32")
 n = len(data)
-train_end, val_end = int(0.7 * n), int(0.9 * n)                  # chronological split, no shuffling
+train_end, val_end = int(0.7 * n), int(0.9 * n)
 mean, std = data[:train_end].mean(axis=0), data[:train_end].std(axis=0)
-data_n = (data - mean) / std                                     # normalise with TRAIN statistics only
-
+data_n = (data - mean) / std
 
 def make_ds(start, end, shuffle):
-    # inputs: rows [i, i+PAST) ; target: temperature at row i+PAST (the next hour)
     return keras.utils.timeseries_dataset_from_array(
         data_n[start:end - PAST], targets=data_n[start + PAST:end, 0],
         sequence_length=PAST, batch_size=BATCH, shuffle=shuffle)
-
 
 train_ds = make_ds(0, train_end, True)
 val_ds = make_ds(train_end, val_end, False)
@@ -65,9 +50,6 @@ test_ds = make_ds(val_end, n, False)
 for xb, yb in train_ds.take(1):
     print("Input batch:", xb.shape, "Target batch:", yb.shape)
 
-# ---------------------------------------------------------------
-# Model
-# ---------------------------------------------------------------
 model = keras.Sequential([
     layers.Input(shape=(PAST, len(FEATURES))),
     layers.LSTM(64),
@@ -87,13 +69,10 @@ for ax, m in zip(axes, ["loss", "mae"]):
     ax.set_title(f"{m} (normalised units)"); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation in degrees Celsius
-# ---------------------------------------------------------------
 denorm = lambda v: v * std[0] + mean[0]
 y_true = denorm(np.concatenate([y.numpy() for _, y in test_ds]))
 y_pred = denorm(model.predict(test_ds, verbose=0).ravel())
-y_naive = denorm(np.concatenate([x[:, -1, 0].numpy() for x, _ in test_ds]))   # "same as last hour"
+y_naive = denorm(np.concatenate([x[:, -1, 0].numpy() for x, _ in test_ds]))
 
 mae = lambda a, b: np.mean(np.abs(a - b))
 rmse = lambda a, b: np.sqrt(np.mean((a - b) ** 2))
@@ -110,3 +89,4 @@ plt.figure(figsize=(5, 5))
 plt.scatter(y_true, y_pred, s=2, alpha=0.3)
 lim = [y_true.min(), y_true.max()]; plt.plot(lim, lim, "r--")
 plt.xlabel("actual (degC)"); plt.ylabel("predicted (degC)"); plt.title("Predicted vs actual"); plt.show()
+

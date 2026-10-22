@@ -1,9 +1,3 @@
-"""
-Practical 17: Image Denoising Using Autoencoders
-Add Gaussian noise to images and train a convolutional denoising
-autoencoder; measure quality with MSE and PSNR.
-Dataset: Fashion-MNIST (set DATASET = "mnist" for digits)
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -15,17 +9,12 @@ np.random.seed(42)
 DATASET = "fashion_mnist"
 NOISE_FACTOR = 0.4
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 (x_train, _), (x_test, _) = getattr(keras.datasets, DATASET).load_data()
 x_train = x_train.astype("float32")[..., None] / 255.0
 x_test = x_test.astype("float32")[..., None] / 255.0
 
-
 def add_noise(x):
     return np.clip(x + NOISE_FACTOR * np.random.normal(size=x.shape), 0.0, 1.0).astype("float32")
-
 
 x_train_noisy, x_test_noisy = add_noise(x_train), add_noise(x_test)
 print("Clean:", x_train.shape, "Noisy:", x_train_noisy.shape)
@@ -36,33 +25,25 @@ for i in range(8):
     plt.subplot(2, 8, 8 + i + 1); plt.imshow(x_train_noisy[i, :, :, 0], cmap="gray"); plt.axis("off")
 plt.suptitle(f"Clean (top) vs noisy (bottom), noise factor {NOISE_FACTOR}"); plt.show()
 
-# ---------------------------------------------------------------
-# Convolutional denoising autoencoder
-# ---------------------------------------------------------------
 model = keras.Sequential([
     layers.Input(shape=(28, 28, 1)),
-    # encoder
     layers.Conv2D(32, 3, activation="relu", padding="same"),
-    layers.MaxPooling2D(2, padding="same"),                     # 14x14
+    layers.MaxPooling2D(2, padding="same"),
     layers.Conv2D(32, 3, activation="relu", padding="same"),
-    layers.MaxPooling2D(2, padding="same"),                     # 7x7
-    # decoder
-    layers.Conv2DTranspose(32, 3, strides=2, activation="relu", padding="same"),   # 14x14
-    layers.Conv2DTranspose(32, 3, strides=2, activation="relu", padding="same"),   # 28x28
+    layers.MaxPooling2D(2, padding="same"),
+    layers.Conv2DTranspose(32, 3, strides=2, activation="relu", padding="same"),
+    layers.Conv2DTranspose(32, 3, strides=2, activation="relu", padding="same"),
     layers.Conv2D(1, 3, activation="sigmoid", padding="same"),
 ], name="denoising_autoencoder")
 model.compile(optimizer="adam", loss="mse")
 model.summary()
 
-history = model.fit(x_train_noisy, x_train,                   # noisy input -> clean target
+history = model.fit(x_train_noisy, x_train,
                     epochs=15, batch_size=128, validation_data=(x_test_noisy, x_test), verbose=2)
 
 plt.plot(history.history["loss"], label="train"); plt.plot(history.history["val_loss"], label="validation")
 plt.title("Denoising loss (MSE)"); plt.xlabel("epoch"); plt.legend(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation: MSE and PSNR
-# ---------------------------------------------------------------
 denoised = model.predict(x_test_noisy, verbose=0)
 mse_noisy = np.mean((x_test_noisy - x_test) ** 2)
 mse_denoised = np.mean((denoised - x_test) ** 2)
@@ -82,3 +63,4 @@ for i in range(n):
         if i == 0: plt.title(title, loc="left")
         if row == 2: plt.title(f"{per_psnr[i]:.1f} dB", fontsize=8)
 plt.suptitle("Clean / noisy / denoised"); plt.show()
+

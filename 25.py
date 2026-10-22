@@ -1,9 +1,3 @@
-"""
-Practical 25: Semantic Segmentation Using CNN (U-Net)
-Label every pixel as pet / background / border; show predicted masks and
-evaluate with Intersection over Union (IoU).
-Dataset: Oxford-IIIT Pet (tensorflow_datasets: oxford_iiit_pet)
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -19,26 +13,20 @@ N_CLASSES = 3
 CLASS_NAMES = ["pet", "background", "border"]
 AUTOTUNE = tf.data.AUTOTUNE
 
-# ---------------------------------------------------------------
-# Data preprocessing
-# ---------------------------------------------------------------
 dataset, info = tfds.load("oxford_iiit_pet", with_info=True)
 print("Train:", info.splits["train"].num_examples, "Test:", info.splits["test"].num_examples)
-
 
 def load(sample):
     img = tf.image.resize(sample["image"], (IMG, IMG)) / 255.0
     mask = tf.image.resize(sample["segmentation_mask"], (IMG, IMG), method="nearest")
-    mask = tf.cast(mask, tf.int32) - 1                    # {1,2,3} -> {0,1,2}
+    mask = tf.cast(mask, tf.int32) - 1
     return img, mask
 
-
 def augment(img, mask):
-    flip = tf.random.uniform(()) > 0.5                    # flip image and mask together
+    flip = tf.random.uniform(()) > 0.5
     img = tf.where(flip, tf.image.flip_left_right(img), img)
     mask = tf.where(flip, tf.image.flip_left_right(mask), mask)
     return img, mask
-
 
 train_ds = (dataset["train"].map(load, AUTOTUNE).cache().shuffle(1000)
             .map(augment, AUTOTUNE).batch(BATCH).prefetch(AUTOTUNE))
@@ -53,10 +41,6 @@ for img, mask in dataset["train"].map(load).take(1):
     plt.subplot(1, 2, 2); plt.imshow(mask[:, :, 0], vmin=0, vmax=2); plt.title("mask"); plt.axis("off")
     plt.show()
 
-
-# ---------------------------------------------------------------
-# U-Net
-# ---------------------------------------------------------------
 def conv_block(x, filters):
     for _ in range(2):
         x = layers.Conv2D(filters, 3, padding="same", use_bias=False)(x)
@@ -64,21 +48,19 @@ def conv_block(x, filters):
         x = layers.ReLU()(x)
     return x
 
-
 def build_unet():
     inputs = keras.Input(shape=(IMG, IMG, 3))
     skips, x = [], inputs
-    for f in [32, 64, 128, 256]:                           # contracting path
+    for f in [32, 64, 128, 256]:
         x = conv_block(x, f); skips.append(x)
         x = layers.MaxPooling2D()(x)
-    x = conv_block(x, 512)                                 # bottleneck (8x8)
-    for f, skip in zip([256, 128, 64, 32], reversed(skips)):   # expanding path
+    x = conv_block(x, 512)
+    for f, skip in zip([256, 128, 64, 32], reversed(skips)):
         x = layers.Conv2DTranspose(f, 2, strides=2, padding="same")(x)
-        x = layers.Concatenate()([x, skip])                # skip connection
+        x = layers.Concatenate()([x, skip])
         x = conv_block(x, f)
-    outputs = layers.Conv2D(N_CLASSES, 1, activation="softmax")(x)   # per-pixel class probabilities
+    outputs = layers.Conv2D(N_CLASSES, 1, activation="softmax")(x)
     return keras.Model(inputs, outputs, name="unet")
-
 
 model = build_unet()
 model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
@@ -93,9 +75,6 @@ for ax, m in zip(axes, ["loss", "accuracy"]):
     ax.set_title(f"{m} (pixel level)"); ax.set_xlabel("epoch"); ax.legend()
 plt.tight_layout(); plt.show()
 
-# ---------------------------------------------------------------
-# Evaluation: IoU
-# ---------------------------------------------------------------
 cm = np.zeros((N_CLASSES, N_CLASSES), dtype=np.int64)
 for imgs, masks in test_ds:
     pred = np.argmax(model.predict(imgs, verbose=0), axis=-1).ravel()
@@ -109,9 +88,6 @@ for name, v in zip(CLASS_NAMES, iou_per_class):
 print(f"Mean IoU      : {iou_per_class.mean():.4f}")
 print(f"Pixel accuracy: {pixel_acc:.4f}")
 
-# ---------------------------------------------------------------
-# Predicted masks
-# ---------------------------------------------------------------
 imgs, masks = next(iter(test_ds))
 preds = np.argmax(model.predict(imgs, verbose=0), axis=-1)
 plt.figure(figsize=(10, 13))
@@ -127,3 +103,4 @@ for i in range(4):
             plt.imshow(im, vmin=0, vmax=2)
         plt.title(title, fontsize=9); plt.axis("off")
 plt.tight_layout(); plt.show()
+
